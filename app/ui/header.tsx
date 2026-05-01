@@ -1,18 +1,18 @@
 'use client';
-
 import { useEffect, useState } from "react";
 import "./styles/layout.scss"
-// import { AppKitButton, useAppKitAccount } from "@reown/appkit/react";
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Moon, Sun, Menu, X } from "lucide-react";
 import Link from "next/link";
-// import "../ui/styles/layout.scss"
 
 const Header = () => {
-
-    const [theme, setTheme] = useState<'light' | 'dark'>(
-        (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
-    );
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const saved = localStorage.getItem('theme') as 'light' | 'dark' || 'dark';
+        setTheme(saved);
+    }, []);
 
     useEffect(() => {
         document.body.className = theme === 'light' ? 'light-theme' : '';
@@ -20,73 +20,74 @@ const Header = () => {
     }, [theme]);
 
     const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
     return (
-        <>
-            <header>
+        <header>
+            {/* Logo */}
+            <div className="header-logo">
+                <Link href="/">
+                    <h1>Stash</h1>
+                </Link>
+            </div>
 
+            {/* Desktop Nav */}
+            <nav className="header-nav">
+                <ul>
+                    <li><Link className="nav-item" href="/dashboard/overview">Overview</Link></li>
+                    <li><Link className="nav-item" href="/dashboard/fixed">Fixed</Link></li>
+                    <li><Link className="nav-item" href="/dashboard/flexible">Flexible</Link></li>
+                    <li><Link className="nav-item" href="/dashboard/transfer">Transfer</Link></li>
+                </ul>
+            </nav>
 
-                <nav
-                // style={!isMenuOpen? {display:"block"}:{display:"none"}}
+            {/* Actions */}
+            <div className="header-actions">
+                {/* Theme Toggle */}
+                <button
+                    className="btn-icon"
+                    onClick={toggleTheme}
+                    title="Toggle theme"
                 >
-                    {/* <ul>
-                        <li>
-                            <Link
-                                className={"nav-item"}
-                                href={"/"}
+                    {theme === 'light' ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
 
-                            >
-                                Home
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                className={"nav-item"}
-                                href={"/dashboard"}
-
-                            >
-                                Dashboard
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                className={"nav-item"}
-                                href={"/market-place"}
-
-                            >
-                                Marketplace
-                            </Link>
-                        </li>
-                    </ul> */}
-                </nav>
-                <p>Welcome back</p>
-                <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-
-                    <button
-                        className="btn btn-outline"
-                    // onClick={toggleTheme}
-                    // style={{ width: '40px', height: '40px', padding: 0, borderRadius: '50%' }}
-                    >
-                        {theme === 'light' ? <Sun size={18} /> : < Moon size={18} />}
-                    </button>
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                        <div className="wallet-badge" style={{ cursor: 'pointer' }} title="Click to disconnect">
-                            <div className="indicator" />
-                        </div>
-                    </div>
-
-
-
-
-                    <button className="mobile-toggle " onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                        {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
-
+                {/* Connect Wallet */}
+                <div className="wallet-connect">
+                    <ConnectButton
+                        chainStatus="icon"
+                        showBalance={false}
+                        accountStatus="avatar"
+                    />
                 </div>
-            </header>
 
-        </>
+                {/* Mobile Toggle */}
+                <button
+                    className="mobile-toggle"
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                >
+                    {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+            </div>
+
+            {/* Mobile Menu */}
+            {isMenuOpen && (
+                <div className="mobile-menu">
+                    <ul>
+                        <li><Link href="/dashboard/overview" onClick={() => setIsMenuOpen(false)}>Overview</Link></li>
+                        <li><Link href="/dashboard/fixed" onClick={() => setIsMenuOpen(false)}>Fixed</Link></li>
+                        <li><Link href="/dashboard/flexible" onClick={() => setIsMenuOpen(false)}>Flexible</Link></li>
+                        <li><Link href="/dashboard/transfer" onClick={() => setIsMenuOpen(false)}>Transfer</Link></li>
+                    </ul>
+                    <div className="mobile-wallet">
+                        <ConnectButton
+                            chainStatus="name"
+                            showBalance={false}
+                            accountStatus="full"
+                        />
+                    </div>
+                </div>
+            )}
+        </header>
     )
 }
 
