@@ -16,11 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Stash",
-<<<<<<< Updated upstream
   description: "Stablecoin neobank for saving, sending, and growing digital dollars.",
-=======
-  description: "A fixed-savings vault",
->>>>>>> Stashed changes
 };
 
 export default function RootLayout({
