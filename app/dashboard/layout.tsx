@@ -1,21 +1,14 @@
-import Sidebar from '@/app/ui/sidenav';
-import Header from '../ui/header';
-import "../ui/styles/dashboard.scss"
+import TopNav from '../ui/topnav'
+import Sidebar from '../ui/sidenav'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-    return (
-
-        <section
-            className='dashboard-container'
-            style={{ display: "flex", minHeight: "100vh" }}>
-            <Sidebar />
-
-            <section
-                className='dashboard'
-            >
-                <Header />
-                {children}
-            </section>
-        </section>
-    );
+  return (
+    <div className="dashboard-shell">
+      <TopNav />
+      <section className="dashboard-layout">
+        <Sidebar />
+        <section className="dashboard-main">{children}</section>
+      </section>
+    </div>
+  )
 }

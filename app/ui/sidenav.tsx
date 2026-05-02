@@ -1,92 +1,36 @@
-'use client';
-// import { useAppKitAccount } from "@reown/appkit/react"
-import { ArrowLeftRightIcon, BoxIcon, Home, HomeIcon, HousePlug, LayoutDashboard, LinkIcon, MenuSquare, PiggyBank, PiggyBankIcon, Settings, Settings2 } from "lucide-react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
-import { BsBank2 } from "react-icons/bs";
-import { TbTransferOut } from "react-icons/tb";
-import { MdSend } from "react-icons/md";
-export type SidebarProps = {
-    dashboardSidebar: boolean
-    // onNavigate: (view: string) => void
-    // onClick?: () => void          
-    style?: React.CSSProperties   // inline styles
+'use client'
 
-}
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Box, LayoutDashboard, LockKeyhole, Send, Settings2 } from 'lucide-react'
+
+const navItems = [
+  { href: '/dashboard/overview', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/flexible', label: 'Flexible Vault', icon: Box },
+  { href: '/dashboard/fixed', label: 'Fixed Vault', icon: LockKeyhole },
+  { href: '/dashboard/transfer', label: 'Transfer', icon: Send },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings2 },
+]
+
 const Sidebar = () => {
-    const pathname = usePathname();
+  const pathname = usePathname()
 
-
-    return (<>
-
-        <aside
-            className="nav-sidebar"
-        >
-            <div className="title" >
-                <span><BsBank2 size={22} style={{ marginTop: "6px" }} /></span>
-                <h1 >Stash</h1>
-
-            </div>
-            <ul>
-                <li>
-                    <Link
-                        href="/dashboard/overview"
-                        className={`link ${pathname === '/dashboard/overview' ? 'active' : ''}`}
-                    >
-                        <div>
-                            <span><LayoutDashboard /></span>
-                            <span
-                            >Overview </span>
-                        </div>            </Link>
-                </li>
-                <li>
-                    <Link
-                        href="/dashboard/flexible"
-                        className={`link ${pathname === '/dashboard/flexible' ? 'active' : ''}`}
-                    >
-                        <div>
-                            <span>< BoxIcon /></span>
-                            <span
-                            >Flexible </span>
-                        </div>            </Link>
-                </li>
-
-                <li>
-                    <Link
-                        href="/dashboard/fixed"
-                        className={`link ${pathname === '/dashboard/fixed' ? 'active' : ''}`}
-                    >
-                        <div>
-                            <span><MenuSquare /></span>
-                            <span
-                            >Fixed</span>
-                        </div>            </Link>
-                </li>
-                <li>
-                    <Link
-                        href="/dashboard/transfer"
-                        className={`link ${pathname === '/dashboard/transfer' ? 'active' : ''}`}
-                    >
-                        <div>
-                            <span><MdSend /></span>
-                            <span
-                            >P2P Transfer </span>
-                        </div>            </Link>
-                </li>
-                <li>
-                    <Link
-                        href="/dashboard/settings"
-                        className={`link ${pathname === '/settings' ? 'active' : ''}`}
-                    >
-                        <div>
-                            <span><Settings2 /></span>
-                            <span
-                            >Settings </span>
-                        </div>            </Link>
-                </li>
-            </ul>
-        </aside>
-    </>)
+  return (
+    <aside className="dashboard-rail surface" aria-label="Primary">
+      <ul className="dashboard-rail-nav">
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href
+          return (
+            <li key={href}>
+              <Link href={href} className={isActive ? 'active' : ''} aria-label={label} title={label}>
+                <Icon size={17} />
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </aside>
+  )
 }
 
 export default Sidebar
