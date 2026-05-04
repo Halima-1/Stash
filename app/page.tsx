@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { ArrowRight, ChevronRight, Globe, Lock, Moon, Sun, TrendingUp, Zap, Menu, X } from 'lucide-react'
 import { ConnectButton } from './components/ConnectButton'
 import { useTheme } from './context/ThemeContext'
-import { ReactiveBackground } from './components/ReactiveBackground'
+
 import stashLogoAsset from './images/stashLogo.png'
 import usdcAsset from './images/usdc.webp'
 
@@ -77,7 +77,7 @@ export default function Home() {
 
   return (
     <main className="home-page">
-      <ReactiveBackground />
+      
 
       {/* NAV */}
       <nav className={`home-nav ${scrolled ? 'scrolled' : ''}`}>

@@ -4,6 +4,7 @@ import FlexibleVaultABI from './abi/FlexibleVault.json'
 import P2PTransferABI from './abi/P2PTransfer.json'
 
 export const USDC_ADDRESS      = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+export const USDC_DECIMALS = 6
 export const FIXED_VAULT_ADDRESS    = '0xAc49f293D7b98119E45eCC4Fd528D480dea9F4A8'
 export const FLEXIBLE_VAULT_ADDRESS = '0x56fB93B19bBaF700A4a9214388d664d1A25A699E'
 export const P2P_TRANSFER_ADDRESS   = '0x0C8d08a5d2e107b6f0F09025230C8458376062e7'

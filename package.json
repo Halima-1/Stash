@@ -12,6 +12,7 @@
   "dependencies": {
     "@fontsource/space-mono": "^5.2.9",
     "@fontsource/syne": "^5.2.7",
+    "aos": "^2.3.4",
     "ethers": "^6.16.0",
     "lucide-react": "^1.8.0",
     "next": "16.2.4",

@@ -17,53 +17,60 @@ export function ReactiveBackground() {
     resize()
     window.addEventListener('resize', resize)
 
-    const SPACING = 36
-    let frame = 0
+    const SPACING = 28
     let animId: number
+
+    // Build dot grid once
+    const buildDots = () => {
+      const cols = Math.ceil(canvas.width / SPACING) + 1
+      const rows = Math.ceil(canvas.height / SPACING) + 1
+      const dots: any[] = []
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows; j++) {
+          dots.push({
+            x: i * SPACING,
+            y: j * SPACING,
+            phase: Math.random() * Math.PI * 2,      // random start phase
+            speed: Math.random() * 0.04 + 0.015,     // random speed
+            baseAlpha: Math.random() * 0.08 + 0.06,  // random base brightness
+            pulseStrength: Math.random() * 0.45 + 0.2,
+          })
+        }
+      }
+      return dots
+    }
+
+    let dots = buildDots()
+    window.addEventListener('resize', () => { dots = buildDots() })
+
+    let frame = 0
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       frame++
 
-      const cols = Math.ceil(canvas.width / SPACING) + 1
-      const rows = Math.ceil(canvas.height / SPACING) + 1
+      for (const d of dots) {
+        // Each dot pulses independently
+        const pulse = (Math.sin(frame * d.speed + d.phase) + 1) / 2  // 0 → 1
+        const alpha = d.baseAlpha + pulse * d.pulseStrength
 
-      // Wave travels left to right
-      // Each dot pulses based on its x position offset by time
-      const waveSpeed = 0.015
-      const waveWidth = 8 // how many columns wide the pulse is
+        // Light blue at rest → darker richer blue at peak
+        const r = Math.round(100 - pulse * 55)
+        const g = Math.round(180 - pulse * 90)
+        const b = Math.round(255 - pulse * 30)
+        const radius = 0.8 + pulse * 1.2
 
-      for (let i = 0; i < cols; i++) {
-        for (let j = 0; j < rows; j++) {
-          const x = i * SPACING
-          const y = j * SPACING
+        ctx.beginPath()
+        ctx.arc(d.x, d.y, radius, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`
+        ctx.fill()
 
-          // Wave position: sin wave traveling left to right
-          const wavePos = (frame * waveSpeed) % cols
-          const distFromWave = Math.abs(i - wavePos * waveWidth)
-          const pulse = Math.max(0, 1 - distFromWave / waveWidth)
-
-          // Base alpha + pulse boost
-          const baseAlpha = 0.18
-          const pulseAlpha = baseAlpha + pulse * 0.55
-
-          // Base color: light blue, pulse to darker blue
-          const r = Math.round(39 + pulse * (-10))
-          const g = Math.round(130 + pulse * (-60))
-          const b = Math.round(220 + pulse * (35))
-
+        // Soft glow halo on bright pulses
+        if (pulse > 0.7) {
           ctx.beginPath()
-          ctx.arc(x, y, 1.8 + pulse * 1.4, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${pulseAlpha})`
+          ctx.arc(d.x, d.y, radius + 3 + pulse * 3, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(${r},${g},${b},${pulse * 0.07})`
           ctx.fill()
-
-          // Glow ring on pulse peak
-          if (pulse > 0.6) {
-            ctx.beginPath()
-            ctx.arc(x, y, 3.5 + pulse * 3, 0, Math.PI * 2)
-            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${pulse * 0.12})`
-            ctx.fill()
-          }
         }
       }
 
@@ -84,7 +91,8 @@ export function ReactiveBackground() {
       style={{
         position: 'fixed',
         top: 0, left: 0,
-        width: '100vw', height: '100vh',
+        width: '100vw',
+        height: '100vh',
         pointerEvents: 'none',
         zIndex: 0,
       }}

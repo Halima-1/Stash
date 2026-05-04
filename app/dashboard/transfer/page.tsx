@@ -1,11 +1,20 @@
 'use client'
 
-import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { formatUnits, isAddress, parseUnits } from 'ethers'
 import { CheckCircle2, Send } from 'lucide-react'
+import { useWallet } from '../../context/WalletContext'
+import {
+  getP2PTransferContract,
+  getUSDCContract,
+  P2P_TRANSFER_ADDRESS,
+  USDC_DECIMALS,
+} from '../../../lib/contract'
 
 type TransferForm = {
   recipient: string
   amount: string
+  memo: string
 }
 
 const recipients = [
@@ -14,10 +23,45 @@ const recipients = [
   { name: 'Vendor Escrow', wallet: '0x8f3d...19aa' },
 ]
 
+const BASE_SEPOLIA_CHAIN_ID = '0x14a34'
+
+type TransactionState = {
+  status: 'idle' | 'pending' | 'success' | 'error'
+  message: string
+  txHash: string | null
+}
+
+const formatToken = (value: bigint, decimals: number) => {
+  const parsed = Number(formatUnits(value, decimals))
+  if (!Number.isFinite(parsed)) return '0.00'
+  return parsed.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === 'object' && error !== null) {
+    const maybeError = error as { shortMessage?: string; reason?: string; message?: string }
+    return maybeError.shortMessage ?? maybeError.reason ?? maybeError.message ?? 'Transfer failed'
+  }
+  return 'Transfer failed'
+}
+
 export default function Transfer() {
+  const { address, signer, isConnected, connect, chainId } = useWallet()
   const [formData, setFormData] = useState<TransferForm>({
     recipient: '',
     amount: '',
+    memo: '',
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [walletBalance, setWalletBalance] = useState<bigint>(0n)
+  const [maxMemoBytes, setMaxMemoBytes] = useState<bigint>(0n)
+  const [transactionState, setTransactionState] = useState<TransactionState>({
+    status: 'idle',
+    message: '',
+    txHash: null,
   })
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -31,11 +75,144 @@ export default function Transfer() {
   const parsedAmount = useMemo(() => Number(formData.amount || 0), [formData.amount])
   const networkFee = 0
   const total = Number.isFinite(parsedAmount) ? parsedAmount + networkFee : 0
+  const memoLength = useMemo(() => new TextEncoder().encode(formData.memo).length, [formData.memo])
+  const isMemoValid = useMemo(() => {
+    if (maxMemoBytes === 0n) return true
+    return BigInt(memoLength) <= maxMemoBytes
+  }, [maxMemoBytes, memoLength])
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    console.log(formData)
-  }
+  const refreshBalances = useCallback(async () => {
+    if (!signer || !address) {
+      setWalletBalance(0n)
+      setMaxMemoBytes(0n)
+      return
+    }
+
+    try {
+      const usdcContract = getUSDCContract(signer)
+      const transferContract = getP2PTransferContract(signer)
+      const [wallet, memoMax] = await Promise.all([
+        usdcContract.balanceOf(address) as Promise<bigint>,
+        transferContract.MAX_MEMO_BYTES() as Promise<bigint>,
+      ])
+
+      setWalletBalance(wallet)
+      setMaxMemoBytes(memoMax)
+    } catch (error) {
+      console.error('Failed to refresh transfer balances:', error)
+    }
+  }, [address, signer])
+
+  useEffect(() => {
+    const refreshTimer = window.setTimeout(() => {
+      void refreshBalances()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(refreshTimer)
+    }
+  }, [refreshBalances])
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      if (!isConnected || !signer || !address) {
+        setTransactionState({
+          status: 'error',
+          message: 'Connect your wallet before sending a transfer.',
+          txHash: null,
+        })
+        return
+      }
+
+      if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+        setTransactionState({
+          status: 'error',
+          message: 'Switch to Base Sepolia and try again.',
+          txHash: null,
+        })
+        return
+      }
+
+      if (!isAddress(formData.recipient.trim())) {
+        setTransactionState({
+          status: 'error',
+          message: 'Enter a valid recipient wallet address.',
+          txHash: null,
+        })
+        return
+      }
+
+      if (!isMemoValid) {
+        setTransactionState({
+          status: 'error',
+          message: `Memo exceeds contract limit (${maxMemoBytes.toString()} bytes).`,
+          txHash: null,
+        })
+        return
+      }
+
+      setIsSubmitting(true)
+      setTransactionState({
+        status: 'pending',
+        message: 'Preparing transfer...',
+        txHash: null,
+      })
+
+      try {
+        const amount = parseUnits(formData.amount, USDC_DECIMALS)
+        if (amount <= 0n) {
+          throw new Error('Amount must be greater than zero.')
+        }
+
+        const usdcContract = getUSDCContract(signer)
+        const transferContract = getP2PTransferContract(signer)
+
+        const allowance = (await usdcContract.allowance(address, P2P_TRANSFER_ADDRESS)) as bigint
+        if (allowance < amount) {
+          setTransactionState({
+            status: 'pending',
+            message: 'Approving USDC for transfer contract...',
+            txHash: null,
+          })
+
+          const approvalTx = await usdcContract.approve(P2P_TRANSFER_ADDRESS, amount)
+          await approvalTx.wait()
+        }
+
+        setTransactionState({
+          status: 'pending',
+          message: 'Submitting transfer transaction...',
+          txHash: null,
+        })
+
+        const tx = await transferContract.send(formData.recipient.trim(), amount, formData.memo.trim())
+        const receipt = await tx.wait()
+
+        setTransactionState({
+          status: 'success',
+          message: 'Transfer finalized successfully.',
+          txHash: receipt?.hash ?? tx.hash,
+        })
+        setFormData({
+          recipient: '',
+          amount: '',
+          memo: '',
+        })
+        await refreshBalances()
+      } catch (error) {
+        setTransactionState({
+          status: 'error',
+          message: getErrorMessage(error),
+          txHash: null,
+        })
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [address, chainId, formData, isConnected, isMemoValid, maxMemoBytes, refreshBalances, signer],
+  )
 
   return (
     <section className="dashboard-page surface">
@@ -75,6 +252,7 @@ export default function Transfer() {
                 name="amount"
                 type="number"
                 min="0"
+                step="0.000001"
                 placeholder="0.00"
                 value={formData.amount}
                 onChange={handleChange}
@@ -82,7 +260,22 @@ export default function Transfer() {
               />
               <span>USDC</span>
             </div>
-            <p className="inline-note">Available balance: 535,000.00 USDC</p>
+            <p className="inline-note">Available balance: {formatToken(walletBalance, USDC_DECIMALS)} USDC</p>
+          </div>
+
+          <div>
+            <label htmlFor="memo">Memo (optional)</label>
+            <input
+              id="memo"
+              name="memo"
+              type="text"
+              placeholder="Purpose / reference"
+              value={formData.memo}
+              onChange={handleChange}
+            />
+            <p className="inline-note">
+              {memoLength} bytes used{maxMemoBytes > 0n ? ` / ${maxMemoBytes.toString()} max` : ''}
+            </p>
           </div>
 
           <div className="surface" style={{ padding: '0.8rem' }}>
@@ -96,28 +289,54 @@ export default function Transfer() {
             </div>
           </div>
 
-          <button className="protocol-button protocol-button-primary" type="submit" disabled={parsedAmount <= 0}>
-            <Send size={15} />
-            Confirm transfer
-          </button>
+          {!isConnected ? (
+            <button className="protocol-button protocol-button-primary" type="button" onClick={() => void connect()}>
+              Connect Wallet
+            </button>
+          ) : (
+            <button
+              className="protocol-button protocol-button-primary"
+              type="submit"
+              disabled={isSubmitting || parsedAmount <= 0 || !isMemoValid}
+            >
+              <Send size={15} />
+              {isSubmitting ? 'Submitting...' : 'Confirm transfer'}
+            </button>
+          )}
         </form>
 
         <section className="panel surface-soft stack">
           <h3>Transfer Confirmation</h3>
-          <p>Example receipt output after transaction settlement.</p>
+          <p>Latest transaction status from your wallet flow.</p>
 
           <article className="surface" style={{ padding: '0.9rem' }}>
-            <p className="status-positive" style={{ fontWeight: 700 }}>
+            <p
+              className={transactionState.status === 'success' ? 'status-positive' : 'inline-note'}
+              style={{
+                fontWeight: 700,
+                color: transactionState.status === 'error' ? 'var(--color-danger)' : undefined,
+              }}
+            >
               <CheckCircle2 size={15} style={{ marginRight: '0.35rem', verticalAlign: 'text-bottom' }} />
-              Transaction finalized
+              {transactionState.status === 'idle' ? 'Awaiting transfer' : transactionState.message}
             </p>
             <p className="inline-note" style={{ marginTop: '0.45rem' }}>
-              Your 10,000.00 USDC transfer has been settled on Base and indexed for explorer lookup.
+              {transactionState.txHash
+                ? `Tx hash: ${transactionState.txHash}`
+                : 'Submit a transfer to display the finalized receipt details here.'}
             </p>
           </article>
 
           <div className="button-row">
-            <button type="button" className="protocol-button protocol-button-secondary">View explorer</button>
+            <a
+              href={transactionState.txHash ? `https://sepolia.basescan.org/tx/${transactionState.txHash}` : '#'}
+              target="_blank"
+              rel="noreferrer"
+              className="protocol-button protocol-button-secondary"
+              style={!transactionState.txHash ? { pointerEvents: 'none', opacity: 0.6 } : undefined}
+            >
+              View explorer
+            </a>
             <button type="button" className="protocol-button protocol-button-secondary">Download receipt</button>
           </div>
 
