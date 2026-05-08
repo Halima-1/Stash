@@ -1,45 +1,14 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import Sidebar from "@/app/ui/sidenav";
-import Header from "../ui/header";
-import "../ui/styles/dashboard.scss";
+import TopNav from '../ui/topnav'
+import Sidebar from '../ui/sidenav'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    useEffect(() => {
-        const closeSidebarOnDesktop = () => {
-            if (window.innerWidth >= 1024) {
-                setSidebarOpen(false);
-            }
-        };
-
-        closeSidebarOnDesktop();
-        window.addEventListener("resize", closeSidebarOnDesktop);
-
-        return () => window.removeEventListener("resize", closeSidebarOnDesktop);
-    }, []);
-
-    return (
-        <section className={`dashboard-container ${sidebarOpen ? "sidebar-open" : ""}`}>
-            <Sidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
-            {sidebarOpen ? (
-                <button
-                    type="button"
-                    className="dashboard-overlay"
-                    aria-label="Close sidebar"
-                    onClick={() => setSidebarOpen(false)}
-                />
-            ) : null}
-
-            <section className="dashboard">
-                <Header
-                    isSidebarOpen={sidebarOpen}
-                    onToggleSidebar={() => setSidebarOpen((current) => !current)}
-                />
-                {children}
-            </section>
-        </section>
-    );
+  return (
+    <div className="dashboard-shell">
+      <TopNav />
+      <section className="dashboard-layout">
+        <Sidebar />
+        <section className="dashboard-main">{children}</section>
+      </section>
+    </div>
+  )
 }

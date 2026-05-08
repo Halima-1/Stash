@@ -1,191 +1,386 @@
-"use client"
-import React, { useState } from 'react'
-import { ChevronDown, TrendingUp, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
-import '../../ui/styles/flexible.css'
+'use client'
 
-const Flexible = () => {
-    const [activeForm, setActiveForm] = useState<"deposit" | "withdraw">('deposit')
-    const [amount, setAmount] = useState(0)
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { formatUnits, parseUnits } from 'ethers'
+import { ArrowDownLeft, ArrowUpRight, TrendingUp } from 'lucide-react'
+import { useWallet } from '../../context/WalletContext'
+import {
+  FLEXIBLE_VAULT_ADDRESS,
+  getFlexibleVaultContract,
+  getUSDCContract,
+} from '../../../lib/contract'
 
+const transactions = [
+  { type: 'Deposit', amount: '+5,000.00 USDC', account: '0x29fd...18ca', time: '2h ago', value: '+5,000.00', positive: true },
+  { type: 'Withdraw', amount: '-1,200.00 USDC', account: '0x77cb...9f45', time: '1d ago', value: '-1,200.00', positive: false },
+]
 
-    const deposit = () => {
-        console.log("Depositing...", amount)
-    }
+const BASE_SEPOLIA_CHAIN_ID = '0x14a34'
+const USDC_DECIMALS = 6
 
-    const withdraw = () => {
-        console.log("Withdrawing...")
-    }
-
-    const handleSubmit = () => {
-        if (activeForm == 'deposit') {
-            deposit()
-        } else {
-            withdraw()
-        }
-    }
-
-    return (
-        <section className='flexible-section'>
-            {/* Header */}
-            <div className='flexible-header'>
-                <div className='header-content'>
-                    <h1 className='header-title'>Flexible Savings Vault</h1>
-                    <p className='header-subtitle'>Optimize your idle capital with our institutional-grade liquid wrapper, withdraw any time with zero slippage.</p>
-                </div>
-                <div className='apy-display'>
-                    <span className='apy-label'>CURRENT APY</span>
-                    <div className='apy-value'>
-                        <span className='apy-percentage'>8.42%</span>
-                        <TrendingUp size={20} className='apy-arrow' />
-                    </div>
-                </div>
-            </div>
-
-            {/* Summary Card */}
-            <div className='summary-card'>
-                <div className='summary-item'>
-                    <span className='summary-label'>TOTAL STAKED</span>
-                    <p className='summary-value'>$42,850.00</p>
-                </div>
-                <div className='summary-item'>
-                    <span className='summary-label'>CURRENT APY</span>
-                    <p className='summary-value positive'>5.42%</p>
-                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className='action-buttons'>
-                <button onClick={() => setActiveForm('deposit')} className={activeForm == 'deposit' ? 'btn-primary' : 'btn-secondary'}>Deposit</button>
-                <button onClick={() => setActiveForm('withdraw')} className={activeForm == 'withdraw' ? 'btn-primary' : 'btn-secondary'}>Withdraw</button>
-            </div>
-
-            {/* Main Content */}
-            <div className='flexible-content'>
-                {/* Left Section - Input and Balance */}
-                <form className='left-section'>
-                    {/* Select Asset */}
-                    <div className='select-asset-group'>
-                        <label className='form-label'>Select Asset</label>
-                        <div className='select-dropdown'>
-                            <div className='asset-selected'>
-                                <div className='asset-icon'>◎</div>
-                                <span>USDC</span>
-                            </div>
-                            <ChevronDown size={18} />
-                        </div>
-                    </div>
-
-                    {/* Amount Input */}
-                    <div className='amount-group'>
-                        <label className='form-label'>Amount</label>
-                        <div className='amount-input-group'>
-                            <input
-                                type='number'
-                                className='amount-input'
-                                placeholder='0.00'
-                                onChange={(e) => setAmount(Number(e.target.value))}
-                            />
-                            {/* <button className='max-button' type='button'>Max</button> */}
-                        </div>
-                        <div className='max-display'>
-                            Wallet: <span>42,450.00</span>
-                        </div>
-                    </div>
-
-                    {/* Your Total Balance */}
-                    <div className='balance-card'>
-                        <label className='balance-label'>YOUR TOTAL BALANCE</label>
-                        <div className='balance-amount'>5,250.32 USDC</div>
-                    </div>
-
-                    {/* Yield and Share Price */}
-                    <div className='stats-grid'>
-                        <div className='stat-card'>
-                            <span className='stat-label'>TOTAL YIELD EARNED</span>
-                            <h3 className='stat-value'>+$1,452.12</h3>
-                        </div>
-                        <div className='stat-card'>
-                            <span className='stat-label'>SHARE PRICE</span>
-                            <h3 className='stat-value'>1,084 USDC</h3>
-                        </div>
-                    </div>
-
-                    {/* Confirm Deposit Button */}
-                    <button className='btn-confirm-deposit' type='button' disabled={amount <= 0} onClick={() => handleSubmit()}>Confirm {activeForm == 'deposit' ? 'Deposit' : 'Withdraw'}</button>
-                </form>
-
-                {/* Right Section - Info Cards */}
-                <div className='right-section'>
-                    <div className='info-card'>
-                        <div className='info-row'>
-                            <span className='info-label'>Vault token accrued</span>
-                            <span className='info-value'>+0.80 USDC</span>
-                        </div>
-                        <div className='info-row'>
-                            <span className='info-label'>APR + daily compounding</span>
-                            <span className='info-value'>4.40%</span>
-                        </div>
-                    </div>
-
-                    <div className='info-card'>
-                        <div className='info-row'>
-                            <span className='info-label'>Vault stake contract</span>
-                            <span className='info-value contract'>8x8z</span>
-                        </div>
-                        <div className='info-row'>
-                            <span className='info-label'>Vault contract</span>
-                            <span className='info-value contract'>Ax8</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Recent Transactions */}
-            <div className='recent-transactions'>
-                <div className='transactions-header'>
-                    <h2>Recent Transactions</h2>
-                    <a href='#' className='export-link'>See All</a>
-                </div>
-
-                <div className='transactions-table'>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>TYPE</th>
-                                <th>AMO + PNK</th>
-                                <th>sXAU+ aXAU/S +b</th>
-                                <th>+Blamy</th>
-                                <th>VALUE</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <span className='tx-type deposit'>
-                                        <ArrowDownLeft size={14} /> Deposit
-                                    </span>
-                                </td>
-                                <td>5 + 4333</td>
-                                <td>100000</td>
-                                <td>2h ago</td>
-                                <td><span className='tx-value positive'>+5000</span></td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <span className='tx-type withdraw'>
-                                        <ArrowUpRight size={14} /> Withdraw
-                                    </span>
-                                </td>
-                                <td>- 1,000.00 USDC</td>
-                                <td>USDT - 0000</td>
-                                <td>1d ago</td>
-                                <td><span className='tx-value'>-1600 null</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    )
+type TransactionState = {
+  status: 'idle' | 'pending' | 'success' | 'error'
+  message: string
+  txHash: string | null
 }
-export default Flexible
+
+const formatToken = (value: bigint, decimals: number) => {
+  const parsed = Number(formatUnits(value, decimals))
+  if (!Number.isFinite(parsed)) return '0.00'
+  return parsed.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === 'object' && error !== null) {
+    const maybeError = error as { shortMessage?: string; reason?: string; message?: string }
+    return maybeError.shortMessage ?? maybeError.reason ?? maybeError.message ?? 'Transaction failed'
+  }
+  return 'Transaction failed'
+}
+
+export default function Flexible() {
+  const { address, signer, isConnected, connect, chainId } = useWallet()
+  const [activeForm, setActiveForm] = useState<'deposit' | 'withdraw'>('deposit')
+  const [amountInput, setAmountInput] = useState('')
+  const [walletBalance, setWalletBalance] = useState<bigint>(0n)
+  const [vaultBalance, setVaultBalance] = useState<bigint>(0n)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [transactionState, setTransactionState] = useState<TransactionState>({
+    status: 'idle',
+    message: '',
+    txHash: null,
+  })
+
+  const amountValue = useMemo(() => Number(amountInput || 0), [amountInput])
+  const projectedChange = useMemo(() => {
+    const annualApy = 5.42
+    const monthlyProjection = (amountValue * annualApy) / 12 / 100
+    return monthlyProjection.toFixed(2)
+  }, [amountValue])
+
+  const isAmountValid = useMemo(() => {
+    if (!amountInput) return false
+    const amount = Number(amountInput)
+    return Number.isFinite(amount) && amount > 0
+  }, [amountInput])
+
+  const refreshBalances = useCallback(async () => {
+    if (!signer || !address) {
+      setWalletBalance(0n)
+      setVaultBalance(0n)
+      return
+    }
+
+    try {
+      const usdcContract = getUSDCContract(signer)
+      const flexibleVaultContract = getFlexibleVaultContract(signer)
+
+      const [wallet, shares] = await Promise.all([
+        usdcContract.balanceOf(address) as Promise<bigint>,
+        flexibleVaultContract.balanceOf(address) as Promise<bigint>,
+      ])
+
+      let assets = 0n
+      if (shares > 0n) {
+        assets = (await flexibleVaultContract.convertToAssets(shares)) as bigint
+      }
+
+      setWalletBalance(wallet)
+      setVaultBalance(assets)
+    } catch (error) {
+      console.error('Failed to refresh flexible vault balances:', error)
+    }
+  }, [address, signer])
+
+  useEffect(() => {
+    const refreshTimer = window.setTimeout(() => {
+      void refreshBalances()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(refreshTimer)
+    }
+  }, [refreshBalances])
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      if (!isConnected || !signer || !address) {
+        setTransactionState({
+          status: 'error',
+          message: 'Connect your wallet before submitting a transaction.',
+          txHash: null,
+        })
+        return
+      }
+
+      if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+        setTransactionState({
+          status: 'error',
+          message: 'Switch to Base Sepolia and try again.',
+          txHash: null,
+        })
+        return
+      }
+
+      if (!isAmountValid) {
+        setTransactionState({
+          status: 'error',
+          message: 'Enter a valid USDC amount.',
+          txHash: null,
+        })
+        return
+      }
+
+      setIsSubmitting(true)
+      setTransactionState({
+        status: 'pending',
+        message: activeForm === 'deposit' ? 'Preparing deposit...' : 'Preparing withdrawal...',
+        txHash: null,
+      })
+
+      try {
+        const amount = parseUnits(amountInput, USDC_DECIMALS)
+        if (amount <= 0n) {
+          throw new Error('Amount must be greater than zero.')
+        }
+
+        const flexibleVaultContract = getFlexibleVaultContract(signer)
+
+        if (activeForm === 'deposit') {
+          const usdcContract = getUSDCContract(signer)
+          const allowance = (await usdcContract.allowance(address, FLEXIBLE_VAULT_ADDRESS)) as bigint
+
+          if (allowance < amount) {
+            setTransactionState({
+              status: 'pending',
+              message: 'Approving USDC for Flexible Vault...',
+              txHash: null,
+            })
+
+            const approvalTx = await usdcContract.approve(FLEXIBLE_VAULT_ADDRESS, amount)
+            await approvalTx.wait()
+          }
+
+          setTransactionState({
+            status: 'pending',
+            message: 'Submitting deposit transaction...',
+            txHash: null,
+          })
+
+          const tx = await flexibleVaultContract.deposit(amount, address)
+          const receipt = await tx.wait()
+
+          setTransactionState({
+            status: 'success',
+            message: 'Deposit completed successfully.',
+            txHash: receipt?.hash ?? tx.hash,
+          })
+        } else {
+          setTransactionState({
+            status: 'pending',
+            message: 'Submitting withdrawal transaction...',
+            txHash: null,
+          })
+
+          const tx = await flexibleVaultContract.withdraw(amount, address, address)
+          const receipt = await tx.wait()
+
+          setTransactionState({
+            status: 'success',
+            message: 'Withdrawal completed successfully.',
+            txHash: receipt?.hash ?? tx.hash,
+          })
+        }
+
+        setAmountInput('')
+        await refreshBalances()
+      } catch (error) {
+        setTransactionState({
+          status: 'error',
+          message: getErrorMessage(error),
+          txHash: null,
+        })
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [activeForm, address, amountInput, chainId, isAmountValid, isConnected, refreshBalances, signer],
+  )
+
+  return (
+    <section className="dashboard-page surface">
+      <header className="page-heading">
+        <div>
+          <h2 className="protocol-heading">Flexible Vault</h2>
+          <p>Liquid USDC position with continuous accrual and immediate withdrawal access.</p>
+        </div>
+        <span className="protocol-pill">
+          <TrendingUp size={14} />
+          Current APY 8.42%
+        </span>
+      </header>
+
+      <div className="metrics-grid">
+        <article className="metric-card surface-soft">
+          <span>Total Staked</span>
+          <h3>$42,850.00</h3>
+          <p>Current principal in strategy</p>
+        </article>
+        <article className="metric-card surface-soft">
+          <span>Yield Earned</span>
+          <h3>+$1,452.12</h3>
+          <p>All-time compounded gains</p>
+        </article>
+        <article className="metric-card surface-soft">
+          <span>Share Price</span>
+          <h3>1.0840</h3>
+          <p>USDC per vault share</p>
+        </article>
+      </div>
+
+      <div className="two-col">
+        <form className="panel surface-soft protocol-form" onSubmit={handleSubmit}>
+          <div className="button-row">
+            <button
+              className={`protocol-button ${activeForm === 'deposit' ? 'protocol-button-primary' : 'protocol-button-secondary'}`}
+              type="button"
+              onClick={() => setActiveForm('deposit')}
+            >
+              Deposit
+            </button>
+            <button
+              className={`protocol-button ${activeForm === 'withdraw' ? 'protocol-button-primary' : 'protocol-button-secondary'}`}
+              type="button"
+              onClick={() => setActiveForm('withdraw')}
+            >
+              Withdraw
+            </button>
+          </div>
+
+          <div>
+            <label htmlFor="flex-asset">Asset</label>
+            <input id="flex-asset" value="USDC" readOnly />
+          </div>
+
+          <div>
+            <label htmlFor="flex-amount">Amount</label>
+            <div className="input-inline">
+              <input
+                id="flex-amount"
+                type="number"
+                min="0"
+                step="0.000001"
+                placeholder="0.00"
+                value={amountInput}
+                onChange={(event) => setAmountInput(event.target.value)}
+              />
+              <span>USDC</span>
+            </div>
+            <p className="inline-note">Wallet: {formatToken(walletBalance, USDC_DECIMALS)} USDC</p>
+          </div>
+
+          <div className="surface" style={{ padding: '0.8rem' }}>
+            <div className="row-between">
+              <span className="label">Estimated monthly yield</span>
+              <span className="value mono">+{projectedChange} USDC</span>
+            </div>
+            <div className="row-between" style={{ marginTop: '0.55rem' }}>
+              <span className="label">Vault contract</span>
+              <span className="value mono">{FLEXIBLE_VAULT_ADDRESS}</span>
+            </div>
+          </div>
+
+          {!isConnected ? (
+            <button className="protocol-button protocol-button-primary" type="button" onClick={() => void connect()}>
+              Connect Wallet
+            </button>
+          ) : (
+            <button className="protocol-button protocol-button-primary" type="submit" disabled={isSubmitting || !isAmountValid}>
+              {isSubmitting ? 'Submitting...' : `Confirm ${activeForm === 'deposit' ? 'Deposit' : 'Withdraw'}`}
+            </button>
+          )}
+
+          {transactionState.status !== 'idle' ? (
+            <p
+              className={transactionState.status === 'success' ? 'status-positive' : 'inline-note'}
+              style={transactionState.status === 'error' ? { color: 'var(--color-danger)' } : undefined}
+            >
+              {transactionState.message}
+            </p>
+          ) : null}
+
+          {transactionState.txHash ? (
+            <a
+              href={`https://sepolia.basescan.org/tx/${transactionState.txHash}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-note mono"
+            >
+              View transaction: {transactionState.txHash}
+            </a>
+          ) : null}
+        </form>
+
+        <section className="panel surface-soft stack">
+          <h3>Position Summary</h3>
+          <p>Snapshot of your active liquid vault state.</p>
+
+          <div className="surface" style={{ padding: '0.8rem' }}>
+            <span className="label">Your Total Balance</span>
+            <h4 className="value" style={{ marginTop: '0.4rem' }}>{formatToken(vaultBalance, USDC_DECIMALS)} USDC</h4>
+          </div>
+
+          <div className="surface" style={{ padding: '0.8rem' }}>
+            <span className="label">Vault Token Accrued</span>
+            <h4 className="value" style={{ marginTop: '0.4rem' }}>+0.80 USDC</h4>
+          </div>
+
+          <div className="surface" style={{ padding: '0.8rem' }}>
+            <span className="label">APR + Daily Compounding</span>
+            <h4 className="value" style={{ marginTop: '0.4rem' }}>4.40%</h4>
+          </div>
+        </section>
+      </div>
+
+      <section className="panel surface-soft stack">
+        <div className="row-between">
+          <h3>Recent Transactions</h3>
+          <span className="inline-note">Latest vault activity</span>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Account</th>
+                <th>Time</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((tx) => (
+                <tr key={`${tx.type}-${tx.time}-${tx.amount}`}>
+                  <td>
+                    {tx.type === 'Deposit' ? <ArrowDownLeft size={14} style={{ marginRight: '0.35rem' }} /> : <ArrowUpRight size={14} style={{ marginRight: '0.35rem' }} />}
+                    {tx.type}
+                  </td>
+                  <td>{tx.amount}</td>
+                  <td className="mono">{tx.account}</td>
+                  <td>{tx.time}</td>
+                  <td className={tx.positive ? 'status-positive' : ''}>{tx.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  )
+}

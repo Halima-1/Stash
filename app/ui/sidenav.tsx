@@ -1,109 +1,36 @@
-'use client';
-// import { useAppKitAccount } from "@reown/appkit/react"
-import { BoxIcon, LayoutDashboard, MenuSquare, Settings2, X } from "lucide-react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
-import { MdSend } from "react-icons/md";
+'use client'
 
-type SidebarProps = {
-    isOpen: boolean;
-    onNavigate: () => void;
-};
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Box, LayoutDashboard, LockKeyhole, Send, Settings2 } from 'lucide-react'
 
-const Sidebar = ({ isOpen, onNavigate }: SidebarProps) => {
-    const pathname = usePathname();
+const navItems = [
+  { href: '/dashboard/overview', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/flexible', label: 'Flexible Vault', icon: Box },
+  { href: '/dashboard/fixed', label: 'Fixed Vault', icon: LockKeyhole },
+  { href: '/dashboard/transfer', label: 'Transfer', icon: Send },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings2 },
+]
 
+const Sidebar = () => {
+  const pathname = usePathname()
 
-    return (<>
-
-        <aside
-            className={`nav-sidebar ${isOpen ? "open" : ""}`}
-        >
-            <div className="title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span className="brand-pill">
-                        <span className="brand-core" />
-                        <span className="brand-spark" />
-                    </span>
-                    <div className="brand-text">
-                        <h1>Stash</h1>
-                        <p>Stablecoin banking</p>
-                    </div>
-                </div>
-                
-                <button
-                    className="mobile-close-btn"
-                    onClick={onNavigate}
-                    aria-label="Close sidebar"
-                >
-                    <X size={24} />
-                </button>
-            </div>
-            <ul>
-                <li>
-                    <Link
-                        href="/dashboard/overview"
-                        className={`link ${pathname === '/dashboard/overview' ? 'active' : ''}`}
-                        onClick={onNavigate}
-                    >
-                        <div>
-                            <span><LayoutDashboard /></span>
-                            <span
-                            >Overview </span>
-                        </div>            </Link>
-                </li>
-                <li>
-                    <Link
-                        href="/dashboard/flexible"
-                        className={`link ${pathname === '/dashboard/flexible' ? 'active' : ''}`}
-                        onClick={onNavigate}
-                    >
-                        <div>
-                            <span>< BoxIcon /></span>
-                            <span
-                            >Flexible </span>
-                        </div>            </Link>
-                </li>
-
-                <li>
-                    <Link
-                        href="/dashboard/fixed"
-                        className={`link ${pathname === '/dashboard/fixed' ? 'active' : ''}`}
-                        onClick={onNavigate}
-                    >
-                        <div>
-                            <span><MenuSquare /></span>
-                            <span
-                            >Fixed</span>
-                        </div>            </Link>
-                </li>
-                <li>
-                    <Link
-                        href="/dashboard/transfer"
-                        className={`link ${pathname === '/dashboard/transfer' ? 'active' : ''}`}
-                        onClick={onNavigate}
-                    >
-                        <div>
-                            <span><MdSend /></span>
-                            <span
-                            >P2P Transfer </span>
-                        </div>            </Link>
-                </li>
-                <li>
-                    <Link
-                        href="/dashboard/settings"
-                        className={`link ${pathname === '/settings' ? 'active' : ''}`}
-                        onClick={onNavigate}
-                    >
-                        <div>
-                            <span><Settings2 /></span>
-                            <span
-                            >Settings </span>
-                        </div>            </Link>
-                </li>
-            </ul>
-        </aside>
-    </>)
+  return (
+    <aside className="dashboard-rail surface" aria-label="Primary">
+      <ul className="dashboard-rail-nav">
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href
+          return (
+            <li key={href}>
+              <Link href={href} className={isActive ? 'active' : ''} aria-label={label} title={label}>
+                <Icon size={17} />
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </aside>
+  )
 }
 
 export default Sidebar
